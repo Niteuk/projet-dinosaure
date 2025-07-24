@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Quiz sur les dinosaures</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="quiz-container">
+    <h1>Quiz sur les dinosaures</h1>
+    <div id="progress-container">
+      <p class="score-box">Score : <span id="score">0</span> / <span id="max-score">0</span></p>
+      <p class="question-progress"><span id="question-number">1</span>/<span id="total-questions">0</span></p>
+      <div id="progress-bar">
+        <div id="progress"></div>
+      </div>
+    </div>
+    <div id="mode-selection">
+      <h2>Choisissez le nombre de questions :</h2>
+      <button onclick="startQuiz(10)">10</button>
+      <button onclick="startQuiz(20)">20</button>
+      <button onclick="startQuiz(30)">30</button>
+      <button onclick="startQuiz(50)">50</button>
+      <button onclick="startQuiz('all')">Toutes</button>
+    </div>
+    <div id="game-container" style="display: none;">
+      <div id="question-container"></div>
+    </div>
+  </div>
+  <script src="dino-list.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
