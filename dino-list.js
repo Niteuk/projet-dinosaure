@@ -26,7 +26,7 @@ const dinosaurImages = [
   "gorgonops",
   "ichthyosaurus",
   "ichthyovenator",
-  "iguadodon",
+  "iguanodon",
   "incisivosaurus",
   "indoraptor",
   "kaprosuchus",

@@ -4,6 +4,21 @@
   <meta charset="UTF-8">
   <title>Quiz sur les dinosaures</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="dino-list.js"></script>
+  <script>
+    // Charger les dinosaures appris au démarrage depuis localStorage
+    window.addEventListener('load', () => {
+      knownImages = new Set(JSON.parse(localStorage.getItem("knownDinosaurs")) || []);
+    });
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('Service Worker enregistré'))
+        .catch(err => console.error('Erreur Service Worker:', err));
+    }
+  </script>
 </head>
 <body>
   <div id="quiz-container">
@@ -22,12 +37,13 @@
       <button onclick="startQuiz(30)">30</button>
       <button onclick="startQuiz(50)">50</button>
       <button onclick="startQuiz('all')">Toutes</button>
+      <button onclick="startLearningMode()">Apprentissage</button>
     </div>
     <div id="game-container" style="display: none;">
       <div id="question-container"></div>
     </div>
+    <button id="reset-button" onclick="resetLearnedDinosaurs()">Reset la liste des dinos appris</button>
   </div>
-  <script src="dino-list.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
