@@ -202,6 +202,20 @@ button:hover {
   animation: fadeIn 0.5s ease;
 }
 
+#dedication {
+  margin-top: 15px;
+  font-family: 'Dancing Script', cursive, 'Arial';
+  font-size: 18px;
+  color: #6b9b5f;
+  opacity: 0;
+  animation: fadeInDedication 2s ease-in-out forwards;
+}
+
+@keyframes fadeInDedication {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
@@ -233,5 +247,9 @@ button:hover {
 
   .score-box, .question-progress {
     font-size: 14px;
+  }
+
+  #dedication {
+    font-size: 16px;
   }
 }

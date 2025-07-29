@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Quiz sur les dinosaures</title>
   <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap" rel="stylesheet"> <!-- Ajout de la police -->
   <link rel="manifest" href="manifest.json">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="dino-list.js"></script>
@@ -11,6 +12,8 @@
     // Charger les dinosaures appris au démarrage depuis localStorage
     window.addEventListener('load', () => {
       knownImages = new Set(JSON.parse(localStorage.getItem("knownDinosaurs")) || []);
+      skippedImages = new Set(JSON.parse(localStorage.getItem("skippedDinosaurs")) || []);
+      errorScores = JSON.parse(localStorage.getItem("errorScores")) || {};
     });
 
     if ('serviceWorker' in navigator) {
@@ -33,16 +36,16 @@
     <div id="mode-selection">
       <h2>Choisissez le nombre de questions :</h2>
       <button onclick="startQuiz(10)">10</button>
-      <button onclick="startQuiz(20)">20</button>
-      <button onclick="startQuiz(30)">30</button>
+      <button onclick="startQuiz(25)">25</button>
       <button onclick="startQuiz(50)">50</button>
       <button onclick="startQuiz('all')">Toutes</button>
-      <button onclick="startLearningMode()">Apprentissage</button>
+      <button onclick="startLearningMode()">Apprentissage (Non fonctionnel)</button>
     </div>
     <div id="game-container" style="display: none;">
       <div id="question-container"></div>
     </div>
-    <button id="reset-button" onclick="resetLearnedDinosaurs()">Reset la liste des dinos appris</button>
+    <button id="reset-button" onclick="resetLearnedDinosaurs()">Reset la liste des dinos appris (Non fonctionnel)</button>
+    <div id="dedication">✨❤️✨ Dédicace spéciale à Knouille ✨❤️✨</div> 
   </div>
   <script src="script.js"></script>
 </body>
