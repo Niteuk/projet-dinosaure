@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Quiz sur les dinosaures</title>
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap" rel="stylesheet"> <!-- Ajout de la police -->
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap" rel="stylesheet">
   <link rel="manifest" href="manifest.json">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="dino-list.js"></script>
@@ -24,29 +24,72 @@
   </script>
 </head>
 <body>
-  <div id="quiz-container">
-    <h1>Quiz sur les dinosaures</h1>
-    <div id="progress-container">
-      <p class="score-box">Score : <span id="score">0</span> / <span id="max-score">0</span></p>
-      <p class="question-progress"><span id="question-number">1</span>/<span id="total-questions">0</span></p>
-      <div id="progress-bar">
-        <div id="progress"></div>
+  <div class="main-container">
+    <!-- Panel gauche : Dinosaures appris -->
+    <div class="side-panel" id="learned-panel">
+      <h3>🎓 Appris</h3>
+      <div class="counter" id="learned-counter">0</div>
+      <ul class="dino-list" id="learned-list"></ul>
+    </div>
+
+    <!-- Container principal du quiz -->
+    <div id="quiz-container">
+      <h1>Quiz sur les dinosaures</h1>
+      
+      <div id="progress-container">
+        <p class="score-box">Score : <span id="score">0</span> / <span id="max-score">0</span></p>
+        <p class="question-progress"><span id="question-number">1</span>/<span id="total-questions">0</span></p>
+        <div id="progress-bar">
+          <div id="progress"></div>
+        </div>
       </div>
+      
+      <div class="quiz-content">
+        <div id="mode-selection">
+          <h2>Choisissez le mode de jeu :</h2>
+          <h3>Quiz classique :</h3>
+          <div class="button-grid">
+            <button onclick="startQuiz(10)">10 questions</button>
+            <button onclick="startQuiz(25)">25 questions</button>
+            <button onclick="startQuiz(50)">50 questions</button>
+            <button onclick="startQuiz('all')">Toutes</button>
+          </div>
+          <h3>Mode apprentissage :</h3>
+          <button onclick="startLearningMode()">Apprentissage 🎓</button>
+        </div>
+        
+        <div id="game-container" style="display: none;">
+          <div id="question-container"></div>
+        </div>
+      </div>
+      
+      <button id="reset-button" onclick="resetLearnedDinosaurs()" style="display: none;">
+        Reset la liste des dinos appris 🔄
+      </button>
+      
+      <div id="dedication">✨❤️✨ Dédicace spéciale à Knouille ✨❤️✨</div>
     </div>
-    <div id="mode-selection">
-      <h2>Choisissez le nombre de questions :</h2>
-      <button onclick="startQuiz(10)">10</button>
-      <button onclick="startQuiz(25)">25</button>
-      <button onclick="startQuiz(50)">50</button>
-      <button onclick="startQuiz('all')">Toutes</button>
-      <button onclick="startLearningMode()">Apprentissage (Non fonctionnel)</button>
+
+    <!-- Panel droit : Dinosaures skippés -->
+    <div class="side-panel" id="skipped-panel">
+      <h3>⏭️ Skippés</h3>
+      <div class="counter" id="skipped-counter">0</div>
+      <ul class="dino-list" id="skipped-list"></ul>
     </div>
-    <div id="game-container" style="display: none;">
-      <div id="question-container"></div>
-    </div>
-    <button id="reset-button" onclick="resetLearnedDinosaurs()">Reset la liste des dinos appris (Non fonctionnel)</button>
-    <div id="dedication">✨❤️✨ Dédicace spéciale à Knouille ✨❤️✨</div> 
   </div>
+
+  <!-- Container pour mobile : listes en bas -->
+  <div class="side-panels-container" style="display: none;" id="mobile-panels">
+    <div class="side-panel">
+      <h3>🎓 Appris (<span id="learned-counter-mobile">0</span>)</h3>
+      <ul class="dino-list" id="learned-list-mobile"></ul>
+    </div>
+    <div class="side-panel">
+      <h3>⏭️ Skippés (<span id="skipped-counter-mobile">0</span>)</h3>
+      <ul class="dino-list" id="skipped-list-mobile"></ul>
+    </div>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
