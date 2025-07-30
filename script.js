@@ -8,6 +8,7 @@ const questionNumberDisplay = document.getElementById("question-number");
 const totalQuestionsDisplay = document.getElementById("total-questions");
 const progressBar = document.getElementById("progress");
 const resetButton = document.getElementById("reset-button");
+
 let currentQuestion = 0;
 let score = 0;
 let totalQuestions = 0;
@@ -22,6 +23,68 @@ let learningPool = [];
 let successes = 0;
 let totalAttempts = 0;
 let errorScores = JSON.parse(localStorage.getItem("errorScores")) || {};
+let currentDinoName = "";
+let hasAnsweredCorrectly = false;
+
+// Gestion responsive des listes
+function updateResponsiveLists() {
+  const isMobile = window.innerWidth <= 1000;
+  const desktopPanels = document.querySelectorAll('.main-container .side-panel');
+  const mobilePanels = document.getElementById('mobile-panels');
+  
+  if (isMobile) {
+    // Afficher les listes mobiles en bas
+    desktopPanels.forEach(panel => panel.style.display = 'none');
+    mobilePanels.style.display = 'flex';
+  } else {
+    // Afficher les listes desktop sur les côtés
+    desktopPanels.forEach(panel => panel.style.display = 'block');
+    mobilePanels.style.display = 'none';
+  }
+  
+  updateLists();
+}
+
+// Mettre à jour les listes des dinosaures
+function updateLists() {
+  const learnedArray = [...knownImages].sort();
+  const skippedArray = [...skippedImages].sort();
+  
+  // Desktop
+  updateListContent('learned-list', learnedArray, 'learned-item');
+  updateListContent('skipped-list', skippedArray, 'skipped-item');
+  document.getElementById('learned-counter').textContent = learnedArray.length;
+  document.getElementById('skipped-counter').textContent = skippedArray.length;
+  
+  // Mobile
+  updateListContent('learned-list-mobile', learnedArray, 'learned-item');
+  updateListContent('skipped-list-mobile', skippedArray, 'skipped-item');
+  document.getElementById('learned-counter-mobile').textContent = learnedArray.length;
+  document.getElementById('skipped-counter-mobile').textContent = skippedArray.length;
+}
+
+function updateListContent(listId, items, itemClass) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  
+  list.innerHTML = '';
+  
+  if (items.length === 0) {
+    const emptyItem = document.createElement('li');
+    emptyItem.textContent = 'Aucun';
+    emptyItem.style.fontStyle = 'italic';
+    emptyItem.style.opacity = '0.6';
+    list.appendChild(emptyItem);
+    return;
+  }
+  
+  items.forEach(item => {
+    const li = document.createElement('li');
+    li.textContent = item;
+    li.className = itemClass;
+    list.appendChild(li);
+  });
+}
 
 // Mélanger les images pour randomiser
 function shuffleArray(array) {
@@ -35,15 +98,22 @@ function shuffleArray(array) {
 // Mettre à jour le pool d'apprentissage
 function updateLearningPool() {
   let availableDinosaurs = dinosaurImages.filter(d => !skippedImages.has(d) && !knownImages.has(d));
+  
   let pool = [];
   for (let dino of availableDinosaurs) {
-    let count = Math.min(3, Math.floor(errorScores[dino] || 0)); // Max 3 répétitions
-    for (let i = 0; i <= count; i++) pool.push(dino);
+    let errorCount = errorScores[dino] || 0;
+    let repetitions = Math.min(3, Math.max(1, errorCount));
+    for (let i = 0; i < repetitions; i++) {
+      pool.push(dino);
+    }
   }
-  learningPool = shuffleArray(pool).slice(0, 15); // Limite à 15
-  if (learningPool.length < 15 && availableDinosaurs.length > 0) {
-    learningPool = shuffleArray(learningPool.concat(availableDinosaurs.filter(d => !learningPool.includes(d))).slice(0, 15));
-  }
+  
+  learningPool = shuffleArray(pool);
+  
+  console.log(`Pool d'apprentissage mis à jour: ${learningPool.length} questions`);
+  console.log(`Dinosaures disponibles: ${availableDinosaurs.length}`);
+  console.log(`Dinosaures connus: ${knownImages.size}`);
+  console.log(`Dinosaures skippés: ${skippedImages.size}`);
 }
 
 // Démarrer le quiz classique
@@ -79,7 +149,21 @@ function startLearningMode() {
   currentQuestion = 0;
   successes = 0;
   totalAttempts = 0;
+  hasAnsweredCorrectly = false;
+  
   updateLearningPool();
+  
+  if (learningPool.length === 0) {
+    questionContainer.innerHTML = `
+      <h2>Félicitations ! 🎉</h2>
+      <p>Vous avez terminé l'apprentissage de tous les dinosaures disponibles !</p>
+      <p>Dinosaures appris : ${knownImages.size}</p>
+      <p>Dinosaures skippés : ${skippedImages.size}</p>
+      <button onclick="restartLearning()">Retour au menu</button>
+    `;
+    return;
+  }
+  
   updateSuccessDisplay();
   loadLearningQuestion();
 }
@@ -114,39 +198,76 @@ function loadQuestion() {
   `;
   questionNumberDisplay.textContent = currentQuestion + 1;
   updateProgressBar();
+  
+  // Permettre la soumission avec Entrée
+  document.getElementById("answer").addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+      checkAnswer();
+    }
+  });
+  
+  // Focus sur l'input
+  setTimeout(() => {
+    document.getElementById("answer").focus();
+  }, 100);
 }
 
 // Charger une question en mode apprentissage
 function loadLearningQuestion() {
   if (learningPool.length === 0) {
     questionContainer.innerHTML = `
-      <h2>Apprentissage terminé !</h2>
-      <p>Tous les dinosaures sont appris ou skippés.</p>
-      <button onclick="restartLearning()">Recommencer l'apprentissage</button>
+      <h2>Apprentissage terminé ! 🎉</h2>
+      <p>Tous les dinosaures disponibles sont appris ou skippés.</p>
+      <p>Réussites totales : ${successes} / ${totalAttempts}</p>
+      <button onclick="restartLearning()">Retour au menu</button>
     `;
     return;
   }
 
-  const currentDinoIndex = currentQuestion % learningPool.length;
-  const dinoName = learningPool[currentDinoIndex];
-  const imagePath = `./dinos/${dinoName}.jpg`;
+  const randomIndex = Math.floor(Math.random() * learningPool.length);
+  currentDinoName = learningPool[randomIndex];
+  hasAnsweredCorrectly = false;
+  
+  const imagePath = `./dinos/${currentDinoName}.jpg`;
   questionContainer.innerHTML = `
-    <img src="${imagePath}" alt="${dinoName}" class="loading" onload="this.classList.add('loaded')" onerror="this.src='${FALLBACK_IMAGE}'">
+    <img src="${imagePath}" alt="${currentDinoName}" class="loading" onload="this.classList.add('loaded')" onerror="this.src='${FALLBACK_IMAGE}'">
     <h2>Quel est le nom de ce dinosaure ?</h2>
     <input type="text" id="answer" placeholder="Entrez le nom" autocomplete="off">
     <button onclick="checkAnswer()">Soumettre</button>
     <div id="result-message"></div>
-    <button id="learned-button" onclick="markAsLearned()">Marquer comme appris</button>
-    <button id="skip-button" onclick="skipQuestion()">Skip</button>
+    <div id="learning-buttons" style="display: none;">
+      <button id="learned-button" onclick="markAsLearned()">Marquer comme appris ✅</button>
+      <button id="skip-button" onclick="skipQuestion()">Skip ⏭️</button>
+    </div>
     <div id="success-count"></div>
   `;
+  
   updateSuccessDisplay();
+  
+  // Permettre la soumission avec Entrée
+  document.getElementById("answer").addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+      checkAnswer();
+    }
+  });
+  
+  // Focus sur l'input
+  setTimeout(() => {
+    document.getElementById("answer").focus();
+  }, 100);
 }
 
 // Mettre à jour l'affichage des réussites
 function updateSuccessDisplay() {
   const successCount = document.getElementById("success-count");
-  if (successCount) successCount.textContent = `Réussites : ${successes} / ${totalAttempts}`;
+  if (successCount) {
+    const availableDinos = dinosaurImages.length - knownImages.size - skippedImages.size;
+    successCount.innerHTML = `
+      <p>Réussites : ${successes} / ${totalAttempts}</p>
+      <p>Dinosaures restants : ${availableDinos}</p>
+      <p>Appris : ${knownImages.size} | Skippés : ${skippedImages.size}</p>
+    `;
+  }
 }
 
 // Vérifier la réponse
@@ -154,30 +275,42 @@ function checkAnswer() {
   const answerInput = document.getElementById("answer");
   const resultMessage = document.getElementById("result-message");
   const userAnswer = answerInput.value.trim().toLowerCase();
-  const correctAnswer = learningMode ? learningPool[currentQuestion % learningPool.length] : selectedImages[currentQuestion];
+  const correctAnswer = learningMode ? currentDinoName : selectedImages[currentQuestion];
   const dinoName = correctAnswer.toLowerCase();
 
   answerInput.disabled = true;
-  document.querySelector("button[onclick='checkAnswer()']").style.display = "none";
+  const submitButton = document.querySelector("button[onclick='checkAnswer()']");
+  if (submitButton) submitButton.style.display = "none";
 
   if (userAnswer === dinoName) {
+    hasAnsweredCorrectly = true;
     if (learningMode) successes++;
     else score += POINTS_PER_QUESTION;
-    resultMessage.textContent = "Correct !";
+    
+    resultMessage.textContent = "Correct ! 🎉";
     resultMessage.className = "correct";
-    if (errorScores[dinoName]) delete errorScores[dinoName]; // Réinitialiser le score d'erreur en cas de succès
+    
+    if (errorScores[correctAnswer]) {
+      delete errorScores[correctAnswer];
+      localStorage.setItem("errorScores", JSON.stringify(errorScores));
+    }
   } else {
-    resultMessage.textContent = `Faux ! La réponse correcte est ${correctAnswer}`;
+    hasAnsweredCorrectly = false;
+    resultMessage.textContent = `Faux ! ❌ La réponse correcte est : ${correctAnswer}`;
     resultMessage.className = "incorrect";
-    errorScores[dinoName] = (errorScores[dinoName] || 0) + 1;
+    
+    errorScores[correctAnswer] = (errorScores[correctAnswer] || 0) + 1;
+    localStorage.setItem("errorScores", JSON.stringify(errorScores));
   }
 
   if (learningMode) {
     totalAttempts++;
     updateSuccessDisplay();
-    localStorage.setItem("errorScores", JSON.stringify(errorScores));
-    updateLearningPool();
-    questionContainer.innerHTML += `<button onclick="nextLearningQuestion()">Suivant</button>`;
+    
+    const learningButtons = document.getElementById("learning-buttons");
+    if (learningButtons) learningButtons.style.display = "flex";
+    
+    questionContainer.innerHTML += `<button onclick="nextLearningQuestion()">Question suivante ➡️</button>`;
   } else {
     scoreDisplay.textContent = score;
     usedImages.push(selectedImages[currentQuestion]);
@@ -193,26 +326,41 @@ function nextQuestion() {
 
 // Passer à la question suivante (mode apprentissage)
 function nextLearningQuestion() {
-  currentQuestion++;
+  updateLearningPool();
   loadLearningQuestion();
 }
 
 // Marquer comme appris
 function markAsLearned() {
-  const dinoName = learningPool[currentQuestion % learningPool.length];
-  knownImages.add(dinoName);
+  if (!hasAnsweredCorrectly) {
+    const resultMessage = document.getElementById("result-message");
+    resultMessage.textContent = "⚠️ Vous devez d'abord répondre correctement pour marquer ce dinosaure comme appris !";
+    resultMessage.className = "incorrect";
+    return;
+  }
+  
+  knownImages.add(currentDinoName);
   localStorage.setItem("knownDinosaurs", JSON.stringify([...knownImages]));
-  learningPool = learningPool.filter(d => d !== dinoName);
-  updateLearningPool();
+  
+  learningPool = learningPool.filter(d => d !== currentDinoName);
+  
+  if (errorScores[currentDinoName]) {
+    delete errorScores[currentDinoName];
+    localStorage.setItem("errorScores", JSON.stringify(errorScores));
+  }
+  
+  updateLists();
+  nextLearningQuestion();
 }
 
 // Skip une question
 function skipQuestion() {
-  const dinoName = learningPool[currentQuestion % learningPool.length];
-  skippedImages.add(dinoName);
+  skippedImages.add(currentDinoName);
   localStorage.setItem("skippedDinosaurs", JSON.stringify([...skippedImages]));
-  learningPool = learningPool.filter(d => d !== dinoName);
-  updateLearningPool();
+  
+  learningPool = learningPool.filter(d => d !== currentDinoName);
+  
+  updateLists();
   nextLearningQuestion();
 }
 
@@ -237,12 +385,29 @@ function restartLearning() {
 
 // Réinitialiser les dinosaures appris
 function resetLearnedDinosaurs() {
-  knownImages.clear();
-  skippedImages.clear();
-  errorScores = {};
-  localStorage.removeItem("knownDinosaurs");
-  localStorage.removeItem("skippedDinosaurs");
-  localStorage.removeItem("errorScores");
-  alert("La liste des dinosaures appris a été réinitialisée.");
-  if (learningMode) startLearningMode();
+  if (confirm("Êtes-vous sûr de vouloir réinitialiser tous les progrès d'apprentissage ?")) {
+    knownImages.clear();
+    skippedImages.clear();
+    errorScores = {};
+    localStorage.removeItem("knownDinosaurs");
+    localStorage.removeItem("skippedDinosaurs");
+    localStorage.removeItem("errorScores");
+    
+    updateLists();
+    
+    if (learningMode) {
+      startLearningMode();
+    }
+  }
 }
+
+// Initialisation au chargement de la page
+window.addEventListener('load', () => {
+  updateResponsiveLists();
+  updateLists();
+});
+
+// Mise à jour responsive lors du redimensionnement
+window.addEventListener('resize', () => {
+  updateResponsiveLists();
+});
