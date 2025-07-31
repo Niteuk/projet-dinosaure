@@ -56,10 +56,20 @@
           </div>
           <h3>Mode apprentissage :</h3>
           <button onclick="startLearningMode()">Apprentissage 🎓</button>
+          <h3>Mode cours :</h3>
+          <button onclick="startCourseMode()">Cours 📚</button>
         </div>
         
         <div id="game-container" style="display: none;">
           <div id="question-container"></div>
+        </div>
+
+        <div id="course-container" style="display: none;" class="course-container">
+          <div id="course-nav" class="course-nav" style="display: none;">
+            <span id="current-course-title">Cours</span>
+            <button onclick="backToCourseMenu()">← Retour au menu</button>
+          </div>
+          <div id="course-content"></div>
         </div>
       </div>
       

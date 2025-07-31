@@ -1,6 +1,7 @@
 const quizContainer = document.getElementById("quiz-container");
 const modeSelection = document.getElementById("mode-selection");
 const gameContainer = document.getElementById("game-container");
+const courseContainer = document.getElementById("course-container");
 const questionContainer = document.getElementById("question-container");
 const scoreDisplay = document.getElementById("score");
 const maxScoreDisplay = document.getElementById("max-score");
@@ -17,6 +18,7 @@ const FALLBACK_IMAGE = "https://via.placeholder.com/350x200?text=Image+Indisponi
 let selectedImages = [];
 let usedImages = [];
 let learningMode = false;
+let courseMode = false;
 let knownImages = new Set(JSON.parse(localStorage.getItem("knownDinosaurs")) || []);
 let skippedImages = new Set(JSON.parse(localStorage.getItem("skippedDinosaurs")) || []);
 let learningPool = [];
@@ -26,6 +28,149 @@ let errorScores = JSON.parse(localStorage.getItem("errorScores")) || {};
 let currentDinoName = "";
 let hasAnsweredCorrectly = false;
 
+// Données des cours
+const courseData = {
+  dynasties: {
+    title: "Les Grandes Dynasties de Dinosaures",
+    content: `
+      <h4>🦕 Les Sauropodes (Jurassique-Crétacé)</h4>
+      <p>Les plus grands animaux terrestres ayant jamais existé. Ces herbivores géants dominaient les paysages du Jurassique et du Crétacé avec leurs longs cous et leurs queues massives.</p>
+      <p><strong>Représentants :</strong> Brontosaurus, Diplodocus, Brachiosaurus, Argentinosaurus</p>
+      
+      <h4>🦖 Les Théropodes (Trias-Crétacé)</h4>
+      <p>La dynastie des prédateurs bipèdes, comprenant les plus féroces chasseurs de l'ère mésozoïque. Certains ont évolué pour devenir les oiseaux modernes.</p>
+      <p><strong>Représentants :</strong> Tyrannosaurus, Allosaurus, Velociraptor, Carnotaurus</p>
+      
+      <h4>🛡️ Les Ornithischiens (Jurassique-Crétacé)</h4>
+      <p>Les dinosaures "à bassin d'oiseau", principalement herbivores, développant des armures sophistiquées et des moyens de défense variés.</p>
+      <p><strong>Représentants :</strong> Triceratops, Stegosaurus, Ankylosaurus, Parasaurolophus</p>
+      
+      <h4>🏃 Les Ornithomimidés (Crétacé)</h4>
+      <p>Les "imitateurs d'oiseaux", dinosaures rapides et agiles, souvent omnivores, ressemblant aux autruches modernes.</p>
+      <p><strong>Représentants :</strong> Gallimimus, Ornithomimus, Struthiomimus</p>
+    `
+  },
+  extinctions: {
+    title: "Les 5 Grandes Extinctions de Masse",
+    content: `
+      <h4>1️⃣ Extinction de l'Ordovicien-Silurien (445 Ma)</h4>
+      <p><strong>Cause :</strong> Glaciation massive et chute du niveau des mers</p>
+      <p><strong>Impact :</strong> 85% des espèces marines disparues</p>
+      
+      <h4>2️⃣ Extinction du Dévonien tardif (375 Ma)</h4>
+      <p><strong>Cause :</strong> Appauvrissement en oxygène des océans</p>
+      <p><strong>Impact :</strong> 75% des espèces disparues, surtout marines</p>
+      
+      <h4>3️⃣ Extinction Permien-Trias (252 Ma)</h4>
+      <p><strong>Cause :</strong> Volcanisme massif en Sibérie, réchauffement global</p>
+      <p><strong>Impact :</strong> "La Grande Mort" - 96% des espèces marines et 70% des espèces terrestres</p>
+      
+      <h4>4️⃣ Extinction Trias-Jurassique (201 Ma)</h4>
+      <p><strong>Cause :</strong> Volcanisme et changements climatiques</p>
+      <p><strong>Impact :</strong> 80% des espèces, permettant la domination des dinosaures</p>
+      
+      <h4>5️⃣ Extinction Crétacé-Paléogène (66 Ma)</h4>
+      <p><strong>Cause :</strong> Impact d'astéroïde + volcanisme du Deccan</p>
+      <p><strong>Impact :</strong> Fin des dinosaures non-aviaires, 75% des espèces</p>
+      
+      <p><em>🚨 Nous vivons actuellement la 6ème extinction de masse, causée par l'activité humaine.</em></p>
+    `
+  },
+  timeline: {
+    title: "Frise Chronologique des Dinosaures",
+    content: `
+      <div class="timeline-legend">
+        <div class="legend-item">
+          <div class="legend-color extinction"></div>
+          <span>Extinctions</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color dynasty"></div>
+          <span>Dynasties</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color formation"></div>
+          <span>Formations géologiques</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color discovery"></div>
+          <span>Découvertes</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color event"></div>
+          <span>Événements majeurs</span>
+        </div>
+      </div>
+      
+      <div class="timeline">
+        <div class="timeline-container">
+          <div class="timeline-line"></div>
+          
+          <div class="timeline-event" style="left: 5%;" onclick="showTimelineInfo('permien')">
+            <div class="timeline-marker extinction"></div>
+            <div class="timeline-label">Permien-Trias</div>
+            <div class="timeline-date">252 Ma</div>
+          </div>
+          
+          <div class="timeline-event" style="left: 15%;" onclick="showTimelineInfo('premiers')">
+            <div class="timeline-marker dynasty"></div>
+            <div class="timeline-label">Premiers Dinosaures</div>
+            <div class="timeline-date">230 Ma</div>
+          </div>
+          
+          <div class="timeline-event" style="left: 25%;" onclick="showTimelineInfo('trias')">
+            <div class="timeline-marker extinction"></div>
+            <div class="timeline-label">Trias-Jurassique</div>
+            <div class="timeline-date">201 Ma</div>
+          </div>
+          
+          <div class="timeline-event" style="left: 35%;" onclick="showTimelineInfo('sauropodes')">
+            <div class="timeline-marker dynasty"></div>
+            <div class="timeline-label">Âge des Sauropodes</div>
+            <div class="timeline-date">180 Ma</div>
+          </div>
+          
+          <div class="timeline-event" style="left: 50%;" onclick="showTimelineInfo('theropodes')">
+            <div class="timeline-marker dynasty"></div>
+            <div class="timeline-label">Grands Théropodes</div>
+            <div class="timeline-date">150 Ma</div>
+          </div>
+          
+          <div class="timeline-event" style="left: 65%;" onclick="showTimelineInfo('diversification')">
+            <div class="timeline-marker event"></div>
+            <div class="timeline-label">Grande Diversification</div>
+            <div class="timeline-date">100 Ma</div>
+          </div>
+          
+          <div class="timeline-event" style="left: 80%;" onclick="showTimelineInfo('tyrannosaurus')">
+            <div class="timeline-marker dynasty"></div>
+            <div class="timeline-label">T-Rex et géants</div>
+            <div class="timeline-date">70 Ma</div>
+          </div>
+          
+          <div class="timeline-event" style="left: 95%;" onclick="showTimelineInfo('cretace')">
+            <div class="timeline-marker extinction"></div>
+            <div class="timeline-label">Crétacé-Paléogène</div>
+            <div class="timeline-date">66 Ma</div>
+          </div>
+        </div>
+      </div>
+    `
+  }
+};
+
+// Informations détaillées pour la timeline
+const timelineInfo = {
+  permien: "L'extinction Permien-Trias est la plus massive de tous les temps, éliminant 96% des espèces marines et ouvrant la voie aux dinosaures.",
+  premiers: "Les premiers dinosaures apparaissent au Trias moyen, encore petits et peu diversifiés.",
+  trias: "L'extinction Trias-Jurassique permet aux dinosaures de dominer les écosystèmes terrestres.",
+  sauropodes: "Le Jurassique voit l'essor des sauropodes géants comme Diplodocus et Brachiosaurus.",
+  theropodes: "Les grands prédateurs comme Allosaurus dominent le Jurassique supérieur.",
+  diversification: "Le Crétacé est marqué par une explosion de diversité : tyrannosaures, hadrosaures, cératopsiens.",
+  tyrannosaurus: "Les derniers géants comme T-Rex et Triceratops règnent à la fin du Crétacé.",
+  cretace: "L'impact d'astéroïde met fin au règne des dinosaures non-aviaires."
+};
+
 // Gestion responsive des listes
 function updateResponsiveLists() {
   const isMobile = window.innerWidth <= 1000;
@@ -33,11 +178,9 @@ function updateResponsiveLists() {
   const mobilePanels = document.getElementById('mobile-panels');
   
   if (isMobile) {
-    // Afficher les listes mobiles en bas
     desktopPanels.forEach(panel => panel.style.display = 'none');
     mobilePanels.style.display = 'flex';
   } else {
-    // Afficher les listes desktop sur les côtés
     desktopPanels.forEach(panel => panel.style.display = 'block');
     mobilePanels.style.display = 'none';
   }
@@ -45,25 +188,25 @@ function updateResponsiveLists() {
   updateLists();
 }
 
-// Mettre à jour les listes des dinosaures
+// Mettre à jour les listes des dinosaures avec boutons de suppression
 function updateLists() {
   const learnedArray = [...knownImages].sort();
   const skippedArray = [...skippedImages].sort();
   
   // Desktop
-  updateListContent('learned-list', learnedArray, 'learned-item');
-  updateListContent('skipped-list', skippedArray, 'skipped-item');
+  updateListContent('learned-list', learnedArray, 'learned-item', true);
+  updateListContent('skipped-list', skippedArray, 'skipped-item', false);
   document.getElementById('learned-counter').textContent = learnedArray.length;
   document.getElementById('skipped-counter').textContent = skippedArray.length;
   
   // Mobile
-  updateListContent('learned-list-mobile', learnedArray, 'learned-item');
-  updateListContent('skipped-list-mobile', skippedArray, 'skipped-item');
+  updateListContent('learned-list-mobile', learnedArray, 'learned-item', true);
+  updateListContent('skipped-list-mobile', skippedArray, 'skipped-item', false);
   document.getElementById('learned-counter-mobile').textContent = learnedArray.length;
   document.getElementById('skipped-counter-mobile').textContent = skippedArray.length;
 }
 
-function updateListContent(listId, items, itemClass) {
+function updateListContent(listId, items, itemClass, isLearned) {
   const list = document.getElementById(listId);
   if (!list) return;
   
@@ -80,10 +223,49 @@ function updateListContent(listId, items, itemClass) {
   
   items.forEach(item => {
     const li = document.createElement('li');
-    li.textContent = item;
     li.className = itemClass;
+    
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'dino-name';
+    nameSpan.textContent = item;
+    
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-btn';
+    removeBtn.innerHTML = '×';
+    removeBtn.title = 'Supprimer de la liste';
+    removeBtn.onclick = (e) => {
+      e.stopPropagation();
+      removeDinoFromList(item, isLearned);
+    };
+    
+    li.appendChild(nameSpan);
+    li.appendChild(removeBtn);
     list.appendChild(li);
   });
+}
+
+// Supprimer un dinosaure des listes
+function removeDinoFromList(dinoName, fromLearned) {
+  if (fromLearned) {
+    knownImages.delete(dinoName);
+    localStorage.setItem("knownDinosaurs", JSON.stringify([...knownImages]));
+  } else {
+    skippedImages.delete(dinoName);
+    localStorage.setItem("skippedDinosaurs", JSON.stringify([...skippedImages]));
+  }
+  
+  // Supprimer les erreurs associées
+  if (errorScores[dinoName]) {
+    delete errorScores[dinoName];
+    localStorage.setItem("errorScores", JSON.stringify(errorScores));
+  }
+  
+  updateLists();
+  
+  // Si on est en mode apprentissage, mettre à jour le pool
+  if (learningMode) {
+    updateLearningPool();
+  }
 }
 
 // Mélanger les images pour randomiser
@@ -119,8 +301,10 @@ function updateLearningPool() {
 // Démarrer le quiz classique
 function startQuiz(numQuestions) {
   learningMode = false;
+  courseMode = false;
   modeSelection.style.display = "none";
   gameContainer.style.display = "block";
+  courseContainer.style.display = "none";
   document.getElementById("progress-container").style.display = "block";
   resetButton.style.display = "none";
   
@@ -141,8 +325,10 @@ function startQuiz(numQuestions) {
 // Démarrer le mode apprentissage
 function startLearningMode() {
   learningMode = true;
+  courseMode = false;
   modeSelection.style.display = "none";
   gameContainer.style.display = "block";
+  courseContainer.style.display = "none";
   document.getElementById("progress-container").style.display = "none";
   resetButton.style.display = "block";
   
@@ -166,6 +352,74 @@ function startLearningMode() {
   
   updateSuccessDisplay();
   loadLearningQuestion();
+}
+
+// Démarrer le mode cours
+function startCourseMode() {
+  learningMode = false;
+  courseMode = true;
+  modeSelection.style.display = "none";
+  gameContainer.style.display = "none";
+  courseContainer.style.display = "block";
+  document.getElementById("progress-container").style.display = "none";
+  document.getElementById("course-nav").style.display = "none";
+  resetButton.style.display = "none";
+  
+  showCourseMenu();
+}
+
+// Afficher le menu des cours
+function showCourseMenu() {
+  document.getElementById("course-nav").style.display = "none";
+  document.getElementById("course-content").innerHTML = `
+    <h2>📚 Cours sur les Dinosaures</h2>
+    <p>Découvrez l'histoire fascinante des dinosaures à travers nos cours interactifs :</p>
+    
+    <div class="course-grid">
+      <div class="course-card" onclick="showCourse('dynasties')">
+        <h3>🦕 Les Grandes Dynasties</h3>
+        <p>Découvrez les principales familles de dinosaures et leurs caractéristiques uniques.</p>
+      </div>
+      
+      <div class="course-card" onclick="showCourse('extinctions')">
+        <h3>💥 Les 5 Grandes Extinctions</h3>
+        <p>Explorez les catastrophes qui ont façonné l'évolution de la vie sur Terre.</p>
+      </div>
+      
+      <div class="course-card" onclick="showCourse('timeline')">
+        <h3>⏰ Frise Chronologique</h3>
+        <p>Voyagez dans le temps avec notre timeline interactive des événements majeurs.</p>
+      </div>
+    </div>
+  `;
+}
+
+// Afficher un cours spécifique
+function showCourse(courseId) {
+  const course = courseData[courseId];
+  if (!course) return;
+  
+  document.getElementById("course-nav").style.display = "flex";
+  document.getElementById("current-course-title").textContent = course.title;
+  
+  document.getElementById("course-content").innerHTML = `
+    <div class="course-content">
+      ${course.content}
+    </div>
+  `;
+}
+
+// Retour au menu des cours
+function backToCourseMenu() {
+  showCourseMenu();
+}
+
+// Afficher des informations sur un événement de la timeline
+function showTimelineInfo(eventId) {
+  const info = timelineInfo[eventId];
+  if (info) {
+    alert(info);
+  }
 }
 
 // Mettre à jour la barre de progression
@@ -368,6 +622,7 @@ function skipQuestion() {
 function restartQuiz() {
   modeSelection.style.display = "block";
   gameContainer.style.display = "none";
+  courseContainer.style.display = "none";
   questionContainer.innerHTML = "";
   usedImages = [];
   document.getElementById("progress-container").style.display = "block";
@@ -378,6 +633,7 @@ function restartQuiz() {
 function restartLearning() {
   modeSelection.style.display = "block";
   gameContainer.style.display = "none";
+  courseContainer.style.display = "none";
   questionContainer.innerHTML = "";
   document.getElementById("progress-container").style.display = "block";
   resetButton.style.display = "none";
