@@ -40,6 +40,8 @@ let speedrunErrors = 0;
 let speedrunCorrectAnswers = 0;
 let speedrunCurrentIndex = 0;
 let speedrunDinosaurs = [];
+let speedrunCorrectDinos = new Set(); // Dinosaures trouvés correctement
+let speedrunRemainingPool = []; // Pool des dinosaures restants
 
 // Données des cours
 const courseData = {
@@ -320,12 +322,24 @@ function updateSpeedrunRecords() {
   // Trier les records par temps croissant
   speedrunRecords.sort((a, b) => a.time - b.time);
   
-  recordsList.innerHTML = speedrunRecords.slice(0, 5).map((record, index) => `
-    <div class="record-item">
-      <span class="record-rank">${index + 1}.</span>
-      <span class="record-time">${formatTime(record.time)}</span>
-    </div>
-  `).join('');
+  recordsList.innerHTML = speedrunRecords.slice(0, 5).map((record, index) => {
+    const date = new Date(record.date || record.timestamp).toLocaleDateString('fr-FR');
+    const accuracy = record.accuracy || Math.round((dinosaurImages.length / (dinosaurImages.length + (record.errors || 0))) * 100);
+    
+    return `
+      <div class="record-item">
+        <div class="record-main">
+          <span class="record-rank">${index + 1}.</span>
+          <span class="record-time">${formatTime(record.time)}</span>
+          <span class="record-errors">${record.errors || 0} err.</span>
+        </div>
+        <div class="record-details">
+          <span class="record-accuracy">${accuracy}%</span>
+          <span class="record-date">${date}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 // Mettre à jour le pool d'apprentissage
@@ -381,6 +395,8 @@ function startSpeedrun() {
   speedrunCurrentIndex = 0;
   speedrunErrors = 0;
   speedrunCorrectAnswers = 0;
+  speedrunCorrectDinos = new Set();
+  speedrunRemainingPool = [...speedrunDinosaurs]; // Copie du pool initial
   speedrunStartTime = Date.now();
   
   updateSpeedrunDisplay();
@@ -397,28 +413,41 @@ function startSpeedrunTimer() {
 
 function updateSpeedrunDisplay() {
   document.getElementById('speedrun-progress').textContent = 
-    `${speedrunCorrectAnswers} / ${dinosaurImages.length}`;
+    `${speedrunCorrectDinos.size} / ${dinosaurImages.length}`;
   
-  const hearts = '❤️'.repeat(3 - speedrunErrors) + '💔'.repeat(speedrunErrors);
-  document.getElementById('error-hearts').textContent = hearts;
+  // Afficher simplement le nombre d'erreurs au lieu des cœurs
+  document.getElementById('error-hearts').textContent = `${speedrunErrors} erreurs`;
 }
 
 function loadSpeedrunQuestion() {
-  if (speedrunCorrectAnswers >= dinosaurImages.length) {
+  // Vérifier si tous les dinosaures ont été trouvés correctement
+  if (speedrunCorrectDinos.size >= dinosaurImages.length) {
     endSpeedrun(true);
     return;
   }
   
-  if (speedrunErrors >= 3) {
-    endSpeedrun(false);
-    return;
+  // Si on a parcouru tous les dinosaures du pool, on recrée un nouveau pool avec les restants
+  if (speedrunCurrentIndex >= speedrunRemainingPool.length) {
+    // Créer un nouveau pool avec les dinosaures pas encore trouvés
+    const notFound = dinosaurImages.filter(dino => !speedrunCorrectDinos.has(dino));
+    if (notFound.length === 0) {
+      endSpeedrun(true);
+      return;
+    }
+    
+    // Mélanger et recommencer
+    speedrunRemainingPool = shuffleArray([...notFound]);
+    speedrunCurrentIndex = 0;
+    console.log(`Nouveau tour: ${notFound.length} dinosaures restants`);
   }
 
-  const dinoName = speedrunDinosaurs[speedrunCurrentIndex];
+  const dinoName = speedrunRemainingPool[speedrunCurrentIndex];
   const imagePath = `./dinos/${dinoName}.jpg`;
   
   questionContainer.innerHTML = `
-    <img src="${imagePath}" alt="${dinoName}" class="loading" onload="this.classList.add('loaded')" onerror="this.src='${FALLBACK_IMAGE}'">
+    <img src="${imagePath}" alt="${dinoName}" class="loading" 
+         onload="this.classList.add('loaded')" 
+         onerror="this.src='${FALLBACK_IMAGE}'; this.classList.add('loaded'); console.log('Image fallback utilisée pour: ${dinoName}');">
     <h2>Quel est le nom de ce dinosaure ?</h2>
     <input type="text" id="answer" placeholder="Entrez le nom" autocomplete="off">
     <div id="result-message"></div>
@@ -441,13 +470,16 @@ function checkSpeedrunAnswer() {
   const answerInput = document.getElementById("answer");
   const resultMessage = document.getElementById("result-message");
   const userAnswer = answerInput.value.trim().toLowerCase();
-  const correctAnswer = speedrunDinosaurs[speedrunCurrentIndex];
+  const correctAnswer = speedrunRemainingPool[speedrunCurrentIndex];
   const dinoName = correctAnswer.toLowerCase();
 
   answerInput.disabled = true;
 
   if (userAnswer === dinoName) {
+    // Marquer ce dinosaure comme trouvé
+    speedrunCorrectDinos.add(correctAnswer);
     speedrunCorrectAnswers++;
+    
     resultMessage.textContent = "Correct ! 🎉";
     resultMessage.className = "correct";
     
@@ -456,6 +488,15 @@ function checkSpeedrunAnswer() {
       delete errorScores[correctAnswer];
       localStorage.setItem("errorScores", JSON.stringify(errorScores));
     }
+    
+    // Supprimer ce dinosaure du pool restant
+    speedrunRemainingPool.splice(speedrunCurrentIndex, 1);
+    
+    // Ajuster l'index si nécessaire
+    if (speedrunCurrentIndex >= speedrunRemainingPool.length && speedrunRemainingPool.length > 0) {
+      speedrunCurrentIndex = 0;
+    }
+    
   } else {
     speedrunErrors++;
     resultMessage.textContent = `Faux ! ❌ La réponse correcte est : ${correctAnswer}`;
@@ -464,14 +505,17 @@ function checkSpeedrunAnswer() {
     // Augmenter le score d'erreur
     errorScores[correctAnswer] = (errorScores[correctAnswer] || 0) + 1;
     localStorage.setItem("errorScores", JSON.stringify(errorScores));
+    
+    // Le dinosaure reste dans le pool, on passe juste au suivant
+    speedrunCurrentIndex++;
   }
 
   updateSpeedrunDisplay();
   
+  // Passer à la question suivante après 800ms
   setTimeout(() => {
-    speedrunCurrentIndex++;
     loadSpeedrunQuestion();
-  }, 300);
+  }, 800);
 }
 
 function endSpeedrun(completed) {
@@ -479,8 +523,24 @@ function endSpeedrun(completed) {
   const finalTime = Math.floor((Date.now() - speedrunStartTime) / 1000);
   
   if (completed) {
-    // Ajouter le record
-    speedrunRecords.push({ time: finalTime, date: new Date().toISOString() });
+    // Ajouter le record avec toutes les infos
+    const newRecord = {
+      time: finalTime,
+      errors: speedrunErrors,
+      totalAttempts: speedrunCorrectAnswers + speedrunErrors,
+      accuracy: Math.round((speedrunCorrectAnswers / (speedrunCorrectAnswers + speedrunErrors)) * 100),
+      date: new Date().toISOString(),
+      timestamp: Date.now()
+    };
+    
+    speedrunRecords.push(newRecord);
+    
+    // Garder seulement les 20 meilleurs records pour éviter que ça devienne trop gros
+    speedrunRecords.sort((a, b) => a.time - b.time);
+    if (speedrunRecords.length > 20) {
+      speedrunRecords = speedrunRecords.slice(0, 20);
+    }
+    
     localStorage.setItem("speedrunRecords", JSON.stringify(speedrunRecords));
     
     questionContainer.innerHTML = `
@@ -488,23 +548,18 @@ function endSpeedrun(completed) {
       <p class="speedrun-success">Félicitations ! Vous avez trouvé tous les ${dinosaurImages.length} dinosaures !</p>
       <div class="speedrun-stats">
         <p><strong>⏱️ Temps final : ${formatTime(finalTime)}</strong></p>
-        <p>❌ Erreurs : ${speedrunErrors}/3</p>
-        <p>✅ Réponses correctes : ${speedrunCorrectAnswers}</p>
+        <p>❌ Erreurs : ${speedrunErrors}</p>
+        <p>🎯 Tentatives totales : ${speedrunCorrectAnswers + speedrunErrors}</p>
+        <p>📊 Précision : ${newRecord.accuracy}%</p>
       </div>
       <button onclick="restartQuiz()" class="mode-button">Retour au menu</button>
+      <button onclick="startSpeedrun()" class="mode-button speedrun">Nouveau Speedrun</button>
     `;
-  } else {
-    questionContainer.innerHTML = `
-      <h2>💔 Speedrun Échoué</h2>
-      <p>Vous avez fait 3 erreurs. Le speedrun s'arrête ici !</p>
-      <div class="speedrun-stats">
-        <p>⏱️ Temps : ${formatTime(finalTime)}</p>
-        <p>✅ Dinosaures trouvés : ${speedrunCorrectAnswers}/${dinosaurImages.length}</p>
-        <p>❌ Erreurs : ${speedrunErrors}/3</p>
-      </div>
-      <button onclick="restartQuiz()" class="mode-button">Retour au menu</button>
-      <button onclick="startSpeedrun()" class="mode-button speedrun">Réessayer</button>
-    `;
+    
+    // Mettre à jour l'affichage des records
+    setTimeout(() => {
+      updateSpeedrunRecords();
+    }, 100);
   }
   
   document.getElementById("speedrun-interface").style.display = "none";
@@ -649,44 +704,6 @@ function showTimelineInfo(eventId) {
 function updateProgressBar() {
   const progressPercent = (currentQuestion / totalQuestions) * 100;
   progressBar.style.width = `${progressPercent}%`;
-}
-
-// Charger une question classique
-function loadQuestion() {
-  if (currentQuestion >= totalQuestions) {
-    questionContainer.innerHTML = `
-      <h2>Quiz terminé !</h2>
-      <p>Votre score final : ${score} / ${totalQuestions * POINTS_PER_QUESTION}</p>
-      <button onclick="restartQuiz()" class="mode-button">Retour au menu</button>
-    `;
-    scoreDisplay.textContent = score;
-    progressBar.style.width = "100%";
-    return;
-  }
-
-  const dinoName = selectedImages[currentQuestion];
-  const imagePath = `./dinos/${dinoName}.jpg`;
-  questionContainer.innerHTML = `
-    <img src="${imagePath}" alt="${dinoName}" class="loading" onload="this.classList.add('loaded')" onerror="this.src='${FALLBACK_IMAGE}'">
-    <h2>Quel est le nom de ce dinosaure ?</h2>
-    <input type="text" id="answer" placeholder="Entrez le nom" autocomplete="off">
-    <button onclick="checkAnswer()">Soumettre</button>
-    <div id="result-message"></div>
-  `;
-  questionNumberDisplay.textContent = currentQuestion + 1;
-  updateProgressBar();
-  
-  // Permettre la soumission avec Entrée
-  document.getElementById("answer").addEventListener("keypress", function(event) {
-    if (event.key === "Enter") {
-      checkAnswer();
-    }
-  });
-  
-  // Focus sur l'input
-  setTimeout(() => {
-    document.getElementById("answer").focus();
-  }, 100);
 }
 
 // Charger une question en mode apprentissage
@@ -891,4 +908,40 @@ window.addEventListener('load', () => {
 // Mise à jour responsive lors du redimensionnement
 window.addEventListener('resize', () => {
   updateResponsiveLists();
-});
+}); classique
+function loadQuestion() {
+  if (currentQuestion >= totalQuestions) {
+    questionContainer.innerHTML = `
+      <h2>Quiz terminé !</h2>
+      <p>Votre score final : ${score} / ${totalQuestions * POINTS_PER_QUESTION}</p>
+      <button onclick="restartQuiz()" class="mode-button">Retour au menu</button>
+    `;
+    scoreDisplay.textContent = score;
+    progressBar.style.width = "100%";
+    return;
+  }
+
+  const dinoName = selectedImages[currentQuestion];
+  const imagePath = `./dinos/${dinoName}.jpg`;
+  questionContainer.innerHTML = `
+    <img src="${imagePath}" alt="${dinoName}" class="loading" onload="this.classList.add('loaded')" onerror="this.src='${FALLBACK_IMAGE}'">
+    <h2>Quel est le nom de ce dinosaure ?</h2>
+    <input type="text" id="answer" placeholder="Entrez le nom" autocomplete="off">
+    <button onclick="checkAnswer()">Soumettre</button>
+    <div id="result-message"></div>
+  `;
+  questionNumberDisplay.textContent = currentQuestion + 1;
+  updateProgressBar();
+  
+  // Permettre la soumission avec Entrée
+  document.getElementById("answer").addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+      checkAnswer();
+    }
+  });
+  
+  // Focus sur l'input
+  setTimeout(() => {
+    document.getElementById("answer").focus();
+  }, 100);
+}

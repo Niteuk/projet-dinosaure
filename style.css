@@ -146,25 +146,40 @@ body {
   overflow-y: auto;
 }
 
-.record-item {
+.record-errors {
+  font-size: 12px;
+  color: #ff4444;
+  font-weight: normal;
+}
+
+.record-details {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 5px 10px;
-  margin: 3px 0;
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 6px;
-  font-size: 14px;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.record-date {
+  color: #666;
+  font-style: italic;
+}
+
+.record-accuracy {
+  color: #4a7043;
+  font-weight: 500;
 }
 
 .record-rank {
   font-weight: bold;
   color: #B8860B;
+  min-width: 25px;
 }
 
 .record-time {
   font-weight: bold;
   color: #2e5a3c;
+  font-size: 14px;
 }
 
 .no-records {
@@ -341,7 +356,9 @@ body {
 }
 
 #error-hearts {
-  font-size: 1.2em;
+  font-size: 1em;
+  font-weight: bold;
+  color: #ff4444;
 }
 
 img {
@@ -796,8 +813,27 @@ button:hover {
   }
 
   .record-item {
-    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    padding: 8px 12px;
+    margin: 4px 0;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+    font-size: 13px;
+    border-left: 4px solid #B8860B;
+    transition: background 0.2s ease;
   }
+
+  .record-item:hover {
+    background: rgba(255, 255, 255, 0.95);
+  }
+
+  .record-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
 
   .timeline-container {
     min-width: 800px;
