@@ -57,10 +57,12 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  word-break: break-word;
 }
 
 .dino-list li .dino-name {
   flex: 1;
+  min-width: 0;
 }
 
 .dino-list li .remove-btn {
@@ -115,12 +117,231 @@ body {
   overflow-y: auto;
 }
 
+/* Styles pour l'écran d'accueil */
+.home-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow-y: auto;
+  padding: 10px 0;
+}
+
+.speedrun-records {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 20px;
+  color: #2e5a3c;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.speedrun-records h3 {
+  margin: 0 0 10px 0;
+  color: #2e5a3c;
+}
+
+.records-list {
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.record-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 10px;
+  margin: 3px 0;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.record-rank {
+  font-weight: bold;
+  color: #B8860B;
+}
+
+.record-time {
+  font-weight: bold;
+  color: #2e5a3c;
+}
+
+.no-records {
+  text-align: center;
+  font-style: italic;
+  opacity: 0.7;
+  margin: 10px 0;
+}
+
+.stats-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #6b9b5f, #4a7043);
+  color: white;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.stat-number {
+  font-size: clamp(18px, 4vw, 24px);
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: clamp(10px, 2vw, 12px);
+  opacity: 0.9;
+}
+
+.mode-section {
+  margin-bottom: 25px;
+  padding: 20px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.mode-section h3 {
+  color: #2e5a3c;
+  margin: 0 0 8px 0;
+  font-size: clamp(16px, 3vw, 20px);
+}
+
+.mode-description {
+  color: #4a7043;
+  font-size: clamp(12px, 2vw, 14px);
+  margin-bottom: 15px;
+  line-height: 1.4;
+}
+
+.mode-button {
+  background: linear-gradient(135deg, #6b9b5f, #4a7043);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: clamp(12px, 2.5vw, 16px);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 50px;
+  width: 100%;
+  max-width: 250px;
+  margin: 5px auto;
+}
+
+.mode-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #8ec07c, #6b9b5f);
+}
+
+.mode-button.speedrun {
+  background: linear-gradient(135deg, #FF6B35, #F7931E);
+}
+
+.mode-button.speedrun:hover {
+  background: linear-gradient(135deg, #FF8C42, #FFB347);
+}
+
+.mode-button.learning {
+  background: linear-gradient(135deg, #4A90E2, #357ABD);
+}
+
+.mode-button.learning:hover {
+  background: linear-gradient(135deg, #5BA0F2, #4A90E2);
+}
+
+.mode-button.course {
+  background: linear-gradient(135deg, #9B59B6, #8E44AD);
+}
+
+.mode-button.course:hover {
+  background: linear-gradient(135deg, #AF69C6, #9B59B6);
+}
+
+.button-icon {
+  font-size: 1.2em;
+}
+
+.button-text {
+  font-weight: 500;
+}
+
+.button-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.button-grid .mode-button {
+  max-width: none;
+}
+
+/* Interface de jeu */
+.game-interface {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .quiz-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
   min-height: 0;
+}
+
+/* Interface Speedrun */
+.speedrun-hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #FF6B35, #F7931E);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.speedrun-timer {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: bold;
+  font-size: clamp(14px, 3vw, 18px);
+}
+
+.speedrun-progress {
+  font-weight: bold;
+  font-size: clamp(12px, 2.5vw, 16px);
+}
+
+.speedrun-errors {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: clamp(12px, 2.5vw, 16px);
+}
+
+#error-hearts {
+  font-size: 1.2em;
 }
 
 img {
@@ -147,7 +368,7 @@ img.loaded {
 h1 {
   font-size: clamp(20px, 4vw, 28px);
   color: #2e5a3c;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
 }
 
@@ -202,13 +423,6 @@ button:hover {
   background-color: #4a7043;
   transform: translateY(-1px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
-}
-
-.button-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 8px;
-  margin: 8px 0;
 }
 
 #progress-container {
@@ -276,10 +490,17 @@ button:hover {
 
 #learning-buttons {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   gap: 8px;
-  margin: 10px 0;
+  margin: 15px 0;
+}
+
+#learning-buttons button {
+  width: 100%;
+  max-width: 200px;
+  padding: 10px 15px;
+  font-size: 14px;
 }
 
 #learned-button {
@@ -512,6 +733,16 @@ button:hover {
   #quiz-container {
     height: calc(100vh - 220px);
   }
+
+  .stats-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .speedrun-hud {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
 }
 
 @media (max-width: 768px) {
@@ -549,15 +780,23 @@ button:hover {
     padding: 6px 12px;
     margin: 2px;
   }
-  
-  #learning-buttons {
-    flex-direction: column;
-    align-items: center;
+
+  .mode-section {
+    padding: 15px;
+    margin-bottom: 20px;
   }
-  
-  #learning-buttons button {
-    width: 100%;
-    max-width: 250px;
+
+  .stats-container {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .speedrun-records {
+    padding: 12px;
+  }
+
+  .record-item {
+    font-size: 12px;
   }
 
   .timeline-container {
@@ -602,6 +841,21 @@ button:hover {
 
   .course-grid {
     grid-template-columns: 1fr;
+  }
+
+  .mode-button {
+    max-width: 200px;
+  }
+
+  .speedrun-hud {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .speedrun-timer,
+  .speedrun-progress,
+  .speedrun-errors {
+    font-size: 12px;
   }
 }
 

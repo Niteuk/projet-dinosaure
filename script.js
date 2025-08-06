@@ -1,4 +1,6 @@
 const quizContainer = document.getElementById("quiz-container");
+const homeContainer = document.getElementById("home-container");
+const gameInterface = document.getElementById("game-interface");
 const modeSelection = document.getElementById("mode-selection");
 const gameContainer = document.getElementById("game-container");
 const courseContainer = document.getElementById("course-container");
@@ -10,6 +12,7 @@ const totalQuestionsDisplay = document.getElementById("total-questions");
 const progressBar = document.getElementById("progress");
 const resetButton = document.getElementById("reset-button");
 
+// Variables de jeu
 let currentQuestion = 0;
 let score = 0;
 let totalQuestions = 0;
@@ -19,6 +22,7 @@ let selectedImages = [];
 let usedImages = [];
 let learningMode = false;
 let courseMode = false;
+let speedrunMode = false;
 let knownImages = new Set(JSON.parse(localStorage.getItem("knownDinosaurs")) || []);
 let skippedImages = new Set(JSON.parse(localStorage.getItem("skippedDinosaurs")) || []);
 let learningPool = [];
@@ -27,6 +31,15 @@ let totalAttempts = 0;
 let errorScores = JSON.parse(localStorage.getItem("errorScores")) || {};
 let currentDinoName = "";
 let hasAnsweredCorrectly = false;
+
+// Variables Speedrun
+let speedrunRecords = JSON.parse(localStorage.getItem("speedrunRecords")) || [];
+let speedrunStartTime = 0;
+let speedrunTimer = null;
+let speedrunErrors = 0;
+let speedrunCorrectAnswers = 0;
+let speedrunCurrentIndex = 0;
+let speedrunDinosaurs = [];
 
 // Données des cours
 const courseData = {
@@ -171,6 +184,21 @@ const timelineInfo = {
   cretace: "L'impact d'astéroïde met fin au règne des dinosaures non-aviaires."
 };
 
+// Fonctions utilitaires
+function formatTime(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
 // Gestion responsive des listes
 function updateResponsiveLists() {
   const isMobile = window.innerWidth <= 1000;
@@ -261,6 +289,7 @@ function removeDinoFromList(dinoName, fromLearned) {
   }
   
   updateLists();
+  updateHomeStats();
   
   // Si on est en mode apprentissage, mettre à jour le pool
   if (learningMode) {
@@ -268,13 +297,35 @@ function removeDinoFromList(dinoName, fromLearned) {
   }
 }
 
-// Mélanger les images pour randomiser
-function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
+// Mettre à jour les statistiques de l'accueil
+function updateHomeStats() {
+  const learned = knownImages.size;
+  const total = dinosaurImages.length;
+  const progress = Math.round((learned / total) * 100);
+  
+  document.getElementById('learned-stat').textContent = learned;
+  document.getElementById('total-stat').textContent = total;
+  document.getElementById('progress-stat').textContent = progress + '%';
+}
+
+// Mettre à jour les records de speedrun
+function updateSpeedrunRecords() {
+  const recordsList = document.getElementById('records-list');
+  
+  if (speedrunRecords.length === 0) {
+    recordsList.innerHTML = '<p class="no-records">Aucun record pour le moment</p>';
+    return;
   }
-  return array;
+  
+  // Trier les records par temps croissant
+  speedrunRecords.sort((a, b) => a.time - b.time);
+  
+  recordsList.innerHTML = speedrunRecords.slice(0, 5).map((record, index) => `
+    <div class="record-item">
+      <span class="record-rank">${index + 1}.</span>
+      <span class="record-time">${formatTime(record.time)}</span>
+    </div>
+  `).join('');
 }
 
 // Mettre à jour le pool d'apprentissage
@@ -298,14 +349,178 @@ function updateLearningPool() {
   console.log(`Dinosaures skippés: ${skippedImages.size}`);
 }
 
+// Fonctions de navigation
+function showHome() {
+  homeContainer.style.display = 'flex';
+  gameInterface.style.display = 'none';
+  speedrunMode = false;
+  learningMode = false;
+  courseMode = false;
+}
+
+function showGameInterface() {
+  homeContainer.style.display = 'none';
+  gameInterface.style.display = 'flex';
+}
+
+// Démarrer le Speedrun
+function startSpeedrun() {
+  speedrunMode = true;
+  learningMode = false;
+  courseMode = false;
+  
+  showGameInterface();
+  gameContainer.style.display = "block";
+  courseContainer.style.display = "none";
+  document.getElementById("progress-container").style.display = "none";
+  document.getElementById("speedrun-interface").style.display = "block";
+  resetButton.style.display = "none";
+  
+  // Initialiser le speedrun
+  speedrunDinosaurs = shuffleArray([...dinosaurImages]);
+  speedrunCurrentIndex = 0;
+  speedrunErrors = 0;
+  speedrunCorrectAnswers = 0;
+  speedrunStartTime = Date.now();
+  
+  updateSpeedrunDisplay();
+  startSpeedrunTimer();
+  loadSpeedrunQuestion();
+}
+
+function startSpeedrunTimer() {
+  speedrunTimer = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - speedrunStartTime) / 1000);
+    document.getElementById('timer-display').textContent = formatTime(elapsed);
+  }, 1000);
+}
+
+function updateSpeedrunDisplay() {
+  document.getElementById('speedrun-progress').textContent = 
+    `${speedrunCorrectAnswers} / ${dinosaurImages.length}`;
+  
+  const hearts = '❤️'.repeat(3 - speedrunErrors) + '💔'.repeat(speedrunErrors);
+  document.getElementById('error-hearts').textContent = hearts;
+}
+
+function loadSpeedrunQuestion() {
+  if (speedrunCorrectAnswers >= dinosaurImages.length) {
+    endSpeedrun(true);
+    return;
+  }
+  
+  if (speedrunErrors >= 3) {
+    endSpeedrun(false);
+    return;
+  }
+
+  const dinoName = speedrunDinosaurs[speedrunCurrentIndex];
+  const imagePath = `./dinos/${dinoName}.jpg`;
+  
+  questionContainer.innerHTML = `
+    <img src="${imagePath}" alt="${dinoName}" class="loading" onload="this.classList.add('loaded')" onerror="this.src='${FALLBACK_IMAGE}'">
+    <h2>Quel est le nom de ce dinosaure ?</h2>
+    <input type="text" id="answer" placeholder="Entrez le nom" autocomplete="off">
+    <div id="result-message"></div>
+  `;
+  
+  const answerInput = document.getElementById("answer");
+  answerInput.addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+      checkSpeedrunAnswer();
+    }
+  });
+  
+  // Focus sur l'input
+  setTimeout(() => {
+    answerInput.focus();
+  }, 100);
+}
+
+function checkSpeedrunAnswer() {
+  const answerInput = document.getElementById("answer");
+  const resultMessage = document.getElementById("result-message");
+  const userAnswer = answerInput.value.trim().toLowerCase();
+  const correctAnswer = speedrunDinosaurs[speedrunCurrentIndex];
+  const dinoName = correctAnswer.toLowerCase();
+
+  answerInput.disabled = true;
+
+  if (userAnswer === dinoName) {
+    speedrunCorrectAnswers++;
+    resultMessage.textContent = "Correct ! 🎉";
+    resultMessage.className = "correct";
+    
+    // Supprimer les erreurs pour ce dinosaure
+    if (errorScores[correctAnswer]) {
+      delete errorScores[correctAnswer];
+      localStorage.setItem("errorScores", JSON.stringify(errorScores));
+    }
+  } else {
+    speedrunErrors++;
+    resultMessage.textContent = `Faux ! ❌ La réponse correcte est : ${correctAnswer}`;
+    resultMessage.className = "incorrect";
+    
+    // Augmenter le score d'erreur
+    errorScores[correctAnswer] = (errorScores[correctAnswer] || 0) + 1;
+    localStorage.setItem("errorScores", JSON.stringify(errorScores));
+  }
+
+  updateSpeedrunDisplay();
+  
+  setTimeout(() => {
+    speedrunCurrentIndex++;
+    loadSpeedrunQuestion();
+  }, 300);
+}
+
+function endSpeedrun(completed) {
+  clearInterval(speedrunTimer);
+  const finalTime = Math.floor((Date.now() - speedrunStartTime) / 1000);
+  
+  if (completed) {
+    // Ajouter le record
+    speedrunRecords.push({ time: finalTime, date: new Date().toISOString() });
+    localStorage.setItem("speedrunRecords", JSON.stringify(speedrunRecords));
+    
+    questionContainer.innerHTML = `
+      <h2>🏆 Speedrun Terminé ! 🏆</h2>
+      <p class="speedrun-success">Félicitations ! Vous avez trouvé tous les ${dinosaurImages.length} dinosaures !</p>
+      <div class="speedrun-stats">
+        <p><strong>⏱️ Temps final : ${formatTime(finalTime)}</strong></p>
+        <p>❌ Erreurs : ${speedrunErrors}/3</p>
+        <p>✅ Réponses correctes : ${speedrunCorrectAnswers}</p>
+      </div>
+      <button onclick="restartQuiz()" class="mode-button">Retour au menu</button>
+    `;
+  } else {
+    questionContainer.innerHTML = `
+      <h2>💔 Speedrun Échoué</h2>
+      <p>Vous avez fait 3 erreurs. Le speedrun s'arrête ici !</p>
+      <div class="speedrun-stats">
+        <p>⏱️ Temps : ${formatTime(finalTime)}</p>
+        <p>✅ Dinosaures trouvés : ${speedrunCorrectAnswers}/${dinosaurImages.length}</p>
+        <p>❌ Erreurs : ${speedrunErrors}/3</p>
+      </div>
+      <button onclick="restartQuiz()" class="mode-button">Retour au menu</button>
+      <button onclick="startSpeedrun()" class="mode-button speedrun">Réessayer</button>
+    `;
+  }
+  
+  document.getElementById("speedrun-interface").style.display = "none";
+}
+
 // Démarrer le quiz classique
 function startQuiz(numQuestions) {
   learningMode = false;
   courseMode = false;
-  modeSelection.style.display = "none";
+  speedrunMode = false;
+  
+  showGameInterface();
   gameContainer.style.display = "block";
   courseContainer.style.display = "none";
   document.getElementById("progress-container").style.display = "block";
+  document.getElementById("speedrun-interface").style.display = "none";
   resetButton.style.display = "none";
   
   totalQuestions = numQuestions === "all" ? dinosaurImages.length : parseInt(numQuestions);
@@ -326,10 +541,13 @@ function startQuiz(numQuestions) {
 function startLearningMode() {
   learningMode = true;
   courseMode = false;
-  modeSelection.style.display = "none";
+  speedrunMode = false;
+  
+  showGameInterface();
   gameContainer.style.display = "block";
   courseContainer.style.display = "none";
   document.getElementById("progress-container").style.display = "none";
+  document.getElementById("speedrun-interface").style.display = "none";
   resetButton.style.display = "block";
   
   currentQuestion = 0;
@@ -345,7 +563,7 @@ function startLearningMode() {
       <p>Vous avez terminé l'apprentissage de tous les dinosaures disponibles !</p>
       <p>Dinosaures appris : ${knownImages.size}</p>
       <p>Dinosaures skippés : ${skippedImages.size}</p>
-      <button onclick="restartLearning()">Retour au menu</button>
+      <button onclick="restartLearning()" class="mode-button">Retour au menu</button>
     `;
     return;
   }
@@ -358,10 +576,13 @@ function startLearningMode() {
 function startCourseMode() {
   learningMode = false;
   courseMode = true;
-  modeSelection.style.display = "none";
+  speedrunMode = false;
+  
+  showGameInterface();
   gameContainer.style.display = "none";
   courseContainer.style.display = "block";
   document.getElementById("progress-container").style.display = "none";
+  document.getElementById("speedrun-interface").style.display = "none";
   document.getElementById("course-nav").style.display = "none";
   resetButton.style.display = "none";
   
@@ -391,6 +612,8 @@ function showCourseMenu() {
         <p>Voyagez dans le temps avec notre timeline interactive des événements majeurs.</p>
       </div>
     </div>
+    
+    <button onclick="restartQuiz()" class="mode-button">Retour au menu</button>
   `;
 }
 
@@ -434,7 +657,7 @@ function loadQuestion() {
     questionContainer.innerHTML = `
       <h2>Quiz terminé !</h2>
       <p>Votre score final : ${score} / ${totalQuestions * POINTS_PER_QUESTION}</p>
-      <button onclick="restartQuiz()">Recommencer</button>
+      <button onclick="restartQuiz()" class="mode-button">Retour au menu</button>
     `;
     scoreDisplay.textContent = score;
     progressBar.style.width = "100%";
@@ -473,7 +696,7 @@ function loadLearningQuestion() {
       <h2>Apprentissage terminé ! 🎉</h2>
       <p>Tous les dinosaures disponibles sont appris ou skippés.</p>
       <p>Réussites totales : ${successes} / ${totalAttempts}</p>
-      <button onclick="restartLearning()">Retour au menu</button>
+      <button onclick="restartLearning()" class="mode-button">Retour au menu</button>
     `;
     return;
   }
@@ -564,11 +787,11 @@ function checkAnswer() {
     const learningButtons = document.getElementById("learning-buttons");
     if (learningButtons) learningButtons.style.display = "flex";
     
-    questionContainer.innerHTML += `<button onclick="nextLearningQuestion()">Question suivante ➡️</button>`;
+    questionContainer.innerHTML += `<button onclick="nextLearningQuestion()" class="mode-button">Question suivante ➡️</button>`;
   } else {
     scoreDisplay.textContent = score;
     usedImages.push(selectedImages[currentQuestion]);
-    questionContainer.innerHTML += `<button onclick="nextQuestion()">Suivant</button>`;
+    questionContainer.innerHTML += `<button onclick="nextQuestion()" class="mode-button">Suivant</button>`;
   }
 }
 
@@ -604,6 +827,7 @@ function markAsLearned() {
   }
   
   updateLists();
+  updateHomeStats();
   nextLearningQuestion();
 }
 
@@ -615,28 +839,26 @@ function skipQuestion() {
   learningPool = learningPool.filter(d => d !== currentDinoName);
   
   updateLists();
+  updateHomeStats();
   nextLearningQuestion();
 }
 
 // Recommencer le quiz classique
 function restartQuiz() {
-  modeSelection.style.display = "block";
-  gameContainer.style.display = "none";
-  courseContainer.style.display = "none";
+  showHome();
   questionContainer.innerHTML = "";
   usedImages = [];
-  document.getElementById("progress-container").style.display = "block";
-  resetButton.style.display = "none";
+  
+  if (speedrunTimer) {
+    clearInterval(speedrunTimer);
+    speedrunTimer = null;
+  }
 }
 
 // Recommencer le mode apprentissage
 function restartLearning() {
-  modeSelection.style.display = "block";
-  gameContainer.style.display = "none";
-  courseContainer.style.display = "none";
+  showHome();
   questionContainer.innerHTML = "";
-  document.getElementById("progress-container").style.display = "block";
-  resetButton.style.display = "none";
 }
 
 // Réinitialiser les dinosaures appris
@@ -650,6 +872,7 @@ function resetLearnedDinosaurs() {
     localStorage.removeItem("errorScores");
     
     updateLists();
+    updateHomeStats();
     
     if (learningMode) {
       startLearningMode();
@@ -661,6 +884,8 @@ function resetLearnedDinosaurs() {
 window.addEventListener('load', () => {
   updateResponsiveLists();
   updateLists();
+  updateHomeStats();
+  updateSpeedrunRecords();
 });
 
 // Mise à jour responsive lors du redimensionnement

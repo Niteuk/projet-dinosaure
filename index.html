@@ -14,6 +14,7 @@
       knownImages = new Set(JSON.parse(localStorage.getItem("knownDinosaurs")) || []);
       skippedImages = new Set(JSON.parse(localStorage.getItem("skippedDinosaurs")) || []);
       errorScores = JSON.parse(localStorage.getItem("errorScores")) || {};
+      speedrunRecords = JSON.parse(localStorage.getItem("speedrunRecords")) || [];
     });
 
     if ('serviceWorker' in navigator) {
@@ -34,48 +35,123 @@
 
     <!-- Container principal du quiz -->
     <div id="quiz-container">
-      <h1>Quiz sur les dinosaures</h1>
+      <h1>🦕 Quiz sur les dinosaures 🦖</h1>
       
-      <div id="progress-container">
-        <p class="score-box">Score : <span id="score">0</span> / <span id="max-score">0</span></p>
-        <p class="question-progress"><span id="question-number">1</span>/<span id="total-questions">0</span></p>
-        <div id="progress-bar">
-          <div id="progress"></div>
-        </div>
-      </div>
-      
-      <div class="quiz-content">
-        <div id="mode-selection">
-          <h2>Choisissez le mode de jeu :</h2>
-          <h3>Quiz classique :</h3>
-          <div class="button-grid">
-            <button onclick="startQuiz(10)">10 questions</button>
-            <button onclick="startQuiz(25)">25 questions</button>
-            <button onclick="startQuiz(50)">50 questions</button>
-            <button onclick="startQuiz('all')">Toutes</button>
+      <!-- Écran d'accueil amélioré -->
+      <div class="home-container" id="home-container">
+        <!-- Section des records speedrun -->
+        <div class="speedrun-records" id="speedrun-records">
+          <h3>🏆 Meilleurs temps Speedrun</h3>
+          <div class="records-list" id="records-list">
+            <p class="no-records">Aucun record pour le moment</p>
           </div>
-          <h3>Mode apprentissage :</h3>
-          <button onclick="startLearningMode()">Apprentissage 🎓</button>
-          <h3>Mode cours :</h3>
-          <button onclick="startCourseMode()">Cours 📚</button>
-        </div>
-        
-        <div id="game-container" style="display: none;">
-          <div id="question-container"></div>
         </div>
 
-        <div id="course-container" style="display: none;" class="course-container">
-          <div id="course-nav" class="course-nav" style="display: none;">
-            <span id="current-course-title">Cours</span>
-            <button onclick="backToCourseMenu()">← Retour au menu</button>
+        <!-- Statistiques générales -->
+        <div class="stats-container">
+          <div class="stat-card">
+            <div class="stat-number" id="learned-stat">0</div>
+            <div class="stat-label">Dinosaures appris</div>
           </div>
-          <div id="course-content"></div>
+          <div class="stat-card">
+            <div class="stat-number" id="total-stat">0</div>
+            <div class="stat-label">Total disponible</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="progress-stat">0%</div>
+            <div class="stat-label">Progression</div>
+          </div>
+        </div>
+
+        <!-- Modes de jeu -->
+        <div id="mode-selection">
+          <h2>🎮 Choisissez votre mode de jeu :</h2>
+          
+          <div class="mode-section">
+            <h3>⚡ Speedrun</h3>
+            <p class="mode-description">Trouvez tous les dinosaures le plus vite possible ! 3 erreurs maximum.</p>
+            <button class="mode-button speedrun" onclick="startSpeedrun()">
+              <span class="button-icon">🏃‍♂️</span>
+              <span class="button-text">Commencer le Speedrun</span>
+            </button>
+          </div>
+
+          <div class="mode-section">
+            <h3>🎯 Quiz classique</h3>
+            <p class="mode-description">Testez vos connaissances avec un nombre de questions défini.</p>
+            <div class="button-grid">
+              <button class="mode-button" onclick="startQuiz(10)">10 questions</button>
+              <button class="mode-button" onclick="startQuiz(25)">25 questions</button>
+              <button class="mode-button" onclick="startQuiz(50)">50 questions</button>
+              <button class="mode-button" onclick="startQuiz('all')">Toutes</button>
+            </div>
+          </div>
+
+          <div class="mode-section">
+            <h3>🎓 Mode apprentissage</h3>
+            <p class="mode-description">Apprenez de nouveaux dinosaures à votre rythme.</p>
+            <button class="mode-button learning" onclick="startLearningMode()">
+              <span class="button-icon">📚</span>
+              <span class="button-text">Apprentissage</span>
+            </button>
+          </div>
+
+          <div class="mode-section">
+            <h3>📖 Mode cours</h3>
+            <p class="mode-description">Découvrez l'histoire fascinante des dinosaures.</p>
+            <button class="mode-button course" onclick="startCourseMode()">
+              <span class="button-icon">🏛️</span>
+              <span class="button-text">Cours</span>
+            </button>
+          </div>
         </div>
       </div>
-      
-      <button id="reset-button" onclick="resetLearnedDinosaurs()" style="display: none;">
-        Reset la liste des dinos appris 🔄
-      </button>
+
+      <!-- Interface de jeu -->
+      <div class="game-interface" id="game-interface" style="display: none;">
+        <div id="progress-container" style="display: none;">
+          <p class="score-box">Score : <span id="score">0</span> / <span id="max-score">0</span></p>
+          <p class="question-progress"><span id="question-number">1</span>/<span id="total-questions">0</span></p>
+          <div id="progress-bar">
+            <div id="progress"></div>
+          </div>
+        </div>
+
+        <!-- Interface Speedrun -->
+        <div id="speedrun-interface" style="display: none;">
+          <div class="speedrun-hud">
+            <div class="speedrun-timer">
+              <span class="timer-icon">⏱️</span>
+              <span id="timer-display">00:00</span>
+            </div>
+            <div class="speedrun-progress">
+              <span id="speedrun-progress">0 / 0</span>
+            </div>
+            <div class="speedrun-errors">
+              <span class="error-label">Erreurs:</span>
+              <span id="error-hearts">❤️❤️❤️</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="quiz-content">
+          <div id="game-container" style="display: none;">
+            <div id="question-container"></div>
+          </div>
+
+          <div id="course-container" style="display: none;" class="course-container">
+            <div id="course-nav" class="course-nav" style="display: none;">
+              <span id="current-course-title">Cours</span>
+              <button onclick="backToCourseMenu()">← Retour au menu</button>
+            </div>
+            <div id="course-content"></div>
+          </div>
+        </div>
+        
+        <button id="reset-button" onclick="resetLearnedDinosaurs()" style="display: none;">
+          Reset la liste des dinos appris 🔄
+        </button>
+      </div>
       
       <div id="dedication">✨❤️✨ Dédicace spéciale à Knouille ✨❤️✨</div>
     </div>
